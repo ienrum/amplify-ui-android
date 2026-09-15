@@ -27,12 +27,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -114,7 +117,13 @@ fun FaceLivenessDetector(
     onComplete: Action,
     onError: Consumer<FaceLivenessDetectionException>,
     challengeOptions: ChallengeOptions = ChallengeOptions(),
-    videoOptions: VideoOptions = VideoOptions()
+    videoOptions: VideoOptions = VideoOptions(),
+    // KTalk fork: BCP-47 tag of the app's own language setting. Null keeps the
+    // upstream behaviour of following the device locale.
+    languageTag: String? = null,
+    // KTalk fork: ARGB accent for the oval stroke and the cancel button. Null uses
+    // the default so signup keeps the local orange.
+    accentArgb: Int? = null
 ) {
     val scope = rememberCoroutineScope()
     val key = DetectorStateKey(sessionId, region, credentialsProvider, videoOptions)
@@ -148,6 +157,8 @@ fun FaceLivenessDetector(
 
     // Locks portrait orientation for duration of challenge and resets on complete
     LockPortraitOrientation { resetOrientation ->
+        WithAppLanguage(languageTag) {
+        CompositionLocalProvider(LocalKTalkAccent provides accentOf(accentArgb)) {
         Surface(color = MaterialTheme.colorScheme.background) {
             AlwaysOnMaxBrightnessScreen()
             ChallengeView(
@@ -179,6 +190,8 @@ fun FaceLivenessDetector(
                     }
                 }
             )
+        }
+        }
         }
     }
 }
@@ -336,7 +349,7 @@ internal fun ChallengeView(
                         faceGuideRect = it,
                         videoViewportSize = videoViewportSize,
                         // KTalk fork: color only. Geometry is upstream's.
-                        strokeColor = MaterialTheme.colorScheme.primary
+                        strokeColor = LocalKTalkAccent.current
                     )
                 }
 
@@ -379,20 +392,24 @@ internal fun ChallengeView(
                     Column(
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(start = 20.dp, end = 20.dp, top = 56.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                            .padding(
+                                start = KTalkCaptureStyle.sideMargin,
+                                end = KTalkCaptureStyle.sideMargin,
+                                top = KTalkCaptureStyle.titleTopFromNavBar
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(
+                            KTalkCaptureStyle.titleToDescription
+                        )
                     ) {
                         Text(
                             text = stringResource(R.string.amplify_ui_liveness_challenge_title),
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onBackground
+                            style = KTalkCaptureStyle.title
                         )
                         Text(
                             text = stringResource(
                                 R.string.amplify_ui_liveness_challenge_description
                             ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground
+                            style = KTalkCaptureStyle.description
                         )
                     }
                 }
@@ -404,18 +421,27 @@ internal fun ChallengeView(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            .padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                            .padding(
+                                start = KTalkCaptureStyle.sideMargin,
+                                end = KTalkCaptureStyle.sideMargin,
+                                bottom = KTalkCaptureStyle.buttonBottomMargin
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(
+                            KTalkCaptureStyle.hintToButton
+                        )
                     ) {
                         Text(
                             text = stringResource(R.string.amplify_ui_liveness_challenge_hint),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground
+                            style = KTalkCaptureStyle.hint
                         )
                         Button(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp),
+                                .height(KTalkCaptureStyle.buttonHeight),
+                            shape = RoundedCornerShape(KTalkCaptureStyle.buttonCorner),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = LocalKTalkAccent.current
+                            ),
                             onClick = {
                                 livenessCoordinator.processSessionError(
                                     FaceLivenessDetectionException.UserCancelledException(),
@@ -424,7 +450,10 @@ internal fun ChallengeView(
                             }
                         ) {
                             Text(
-                                stringResource(R.string.amplify_ui_liveness_challenge_cancel)
+                                text = stringResource(
+                                    R.string.amplify_ui_liveness_challenge_cancel
+                                ),
+                                style = KTalkCaptureStyle.buttonLabel
                             )
                         }
                     }
