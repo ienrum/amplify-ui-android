@@ -334,7 +334,9 @@ internal fun ChallengeView(
                             .fillMaxSize()
                             .align(Alignment.Center),
                         faceGuideRect = it,
-                        videoViewportSize = videoViewportSize
+                        videoViewportSize = videoViewportSize,
+                        // KTalk fork: color only. Geometry is upstream's.
+                        strokeColor = MaterialTheme.colorScheme.primary
                     )
                 }
 
@@ -371,15 +373,61 @@ internal fun ChallengeView(
                     )
                 }
 
-                CancelChallengeButton(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(16.dp)
-                ) {
-                    livenessCoordinator.processSessionError(
-                        FaceLivenessDetectionException.UserCancelledException(),
-                        true
-                    )
+                // KTalk fork: 시안 DSN-APP-IDT-0007-06 의 상단 제목·설명.
+                // 촬영 판정에 쓰이는 프리뷰·타원·점멸 영역 밖에만 그린다.
+                livenessState.faceGuideRect?.let {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(start = 20.dp, end = 20.dp, top = 56.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.amplify_ui_liveness_challenge_title),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.amplify_ui_liveness_challenge_description
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                }
+
+                // KTalk fork: 취소를 우상단 아이콘에서 하단 풀폭 버튼으로 옮긴다.
+                // 동작은 그대로 UserCancelledException 이다.
+                livenessState.faceGuideRect?.let {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.amplify_ui_liveness_challenge_hint),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Button(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            onClick = {
+                                livenessCoordinator.processSessionError(
+                                    FaceLivenessDetectionException.UserCancelledException(),
+                                    true
+                                )
+                            }
+                        ) {
+                            Text(
+                                stringResource(R.string.amplify_ui_liveness_challenge_cancel)
+                            )
+                        }
+                    }
                 }
 
                 Box(

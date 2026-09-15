@@ -41,7 +41,10 @@ internal fun FaceGuide(
     modifier: Modifier,
     faceGuideRect: RectF?,
     videoViewportSize: VideoViewportSize,
-    backgroundColor: Color = Color.White
+    backgroundColor: Color = Color.White,
+    // KTalk fork: stroke color only. The oval geometry stays as upstream sized it
+    // ("as specified by science") because face fit is an input to the liveness score.
+    strokeColor: Color = Color(0xFFAEB3B7)
 ) {
 
     val scaledBoundingRect = faceGuideRect?.let {
@@ -74,7 +77,7 @@ internal fun FaceGuide(
 
         // Draw oval stroke
         drawOval(
-            color = Color(0xFFAEB3B7),
+            color = strokeColor,
             style = Stroke(4.dp.toPx()),
             topLeft = ovalTopLeft,
             size = ovalSize

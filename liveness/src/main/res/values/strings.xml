@@ -32,4 +32,10 @@
     <string name="amplify_ui_liveness_challenge_connecting">Connecting</string>
     <string name="amplify_ui_liveness_challenge_verifying">Verifying</string>
     <string name="amplify_ui_liveness_challenge_a11y_cancel_content_description">Cancel Challenge</string>
+    <!-- KTalk fork: capture screen header and bottom cancel button. -->
+    <!-- Korean copy lives in the app bundle (values-ko), same override path as upstream strings. -->
+    <string name="amplify_ui_liveness_challenge_title">Center your face on the screen</string>
+    <string name="amplify_ui_liveness_challenge_description">Follow the on-screen instructions.</string>
+    <string name="amplify_ui_liveness_challenge_hint">Look at the camera so your face is clearly visible.</string>
+    <string name="amplify_ui_liveness_challenge_cancel">Cancel</string>
 </resources>
