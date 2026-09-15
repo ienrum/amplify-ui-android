@@ -302,6 +302,32 @@ internal fun ChallengeView(
                     backgroundColor = MaterialTheme.colorScheme.background
                 )
 
+                // KTalk fork: 준비 화면의 제목·설명. 광과민성 고지와 SDK 안내는
+                // 그대로 둔다 — 고지를 가리거나 대체하지 않는다.
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(
+                            start = KTalkCaptureStyle.sideMargin,
+                            end = KTalkCaptureStyle.sideMargin,
+                            top = KTalkCaptureStyle.titleTopFromNavBar
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(
+                        KTalkCaptureStyle.titleToDescription
+                    )
+                ) {
+                    Text(
+                        text = stringResource(R.string.amplify_ui_liveness_challenge_title),
+                        style = KTalkCaptureStyle.title
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.amplify_ui_liveness_challenge_description
+                        ),
+                        style = KTalkCaptureStyle.description
+                    )
+                }
+
                 Column(
                     modifier = Modifier
                         .padding(16.dp)
@@ -318,20 +344,43 @@ internal fun ChallengeView(
                     InstructionMessage(LivenessCheckState.Initial.withStartViewMessage())
                 }
 
-                Box(
+                // KTalk fork: 보조 문구와 시작 버튼. 버튼의 동작은 그대로
+                // onStartViewComplete 다.
+                Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.BottomCenter
+                        .padding(
+                            start = KTalkCaptureStyle.sideMargin,
+                            end = KTalkCaptureStyle.sideMargin,
+                            bottom = KTalkCaptureStyle.buttonBottomMargin
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(
+                        KTalkCaptureStyle.hintToButton
+                    )
                 ) {
+                    Text(
+                        text = stringResource(R.string.amplify_ui_liveness_challenge_hint),
+                        style = KTalkCaptureStyle.hint
+                    )
                     Button(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(KTalkCaptureStyle.buttonHeight),
+                        shape = RoundedCornerShape(KTalkCaptureStyle.buttonCorner),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = LocalKTalkAccent.current
+                        ),
                         onClick = {
                             livenessState.onStartViewComplete()
                         }
                     ) {
-                        Text(stringResource(R.string.amplify_ui_liveness_get_ready_begin_check))
+                        Text(
+                            text = stringResource(
+                                R.string.amplify_ui_liveness_get_ready_begin_check
+                            ),
+                            style = KTalkCaptureStyle.buttonLabel
+                        )
                     }
                 }
 
@@ -347,9 +396,7 @@ internal fun ChallengeView(
                             .fillMaxSize()
                             .align(Alignment.Center),
                         faceGuideRect = it,
-                        videoViewportSize = videoViewportSize,
-                        // KTalk fork: color only. Geometry is upstream's.
-                        strokeColor = LocalKTalkAccent.current
+                        videoViewportSize = videoViewportSize
                     )
                 }
 
@@ -386,77 +433,15 @@ internal fun ChallengeView(
                     )
                 }
 
-                // KTalk fork: 시안 DSN-APP-IDT-0007-06 의 상단 제목·설명.
-                // 촬영 판정에 쓰이는 프리뷰·타원·점멸 영역 밖에만 그린다.
-                livenessState.faceGuideRect?.let {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(
-                                start = KTalkCaptureStyle.sideMargin,
-                                end = KTalkCaptureStyle.sideMargin,
-                                top = KTalkCaptureStyle.titleTopFromNavBar
-                            ),
-                        verticalArrangement = Arrangement.spacedBy(
-                            KTalkCaptureStyle.titleToDescription
-                        )
-                    ) {
-                        Text(
-                            text = stringResource(R.string.amplify_ui_liveness_challenge_title),
-                            style = KTalkCaptureStyle.title
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.amplify_ui_liveness_challenge_description
-                            ),
-                            style = KTalkCaptureStyle.description
-                        )
-                    }
-                }
-
-                // KTalk fork: 취소를 우상단 아이콘에서 하단 풀폭 버튼으로 옮긴다.
-                // 동작은 그대로 UserCancelledException 이다.
-                livenessState.faceGuideRect?.let {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .padding(
-                                start = KTalkCaptureStyle.sideMargin,
-                                end = KTalkCaptureStyle.sideMargin,
-                                bottom = KTalkCaptureStyle.buttonBottomMargin
-                            ),
-                        verticalArrangement = Arrangement.spacedBy(
-                            KTalkCaptureStyle.hintToButton
-                        )
-                    ) {
-                        Text(
-                            text = stringResource(R.string.amplify_ui_liveness_challenge_hint),
-                            style = KTalkCaptureStyle.hint
-                        )
-                        Button(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(KTalkCaptureStyle.buttonHeight),
-                            shape = RoundedCornerShape(KTalkCaptureStyle.buttonCorner),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = LocalKTalkAccent.current
-                            ),
-                            onClick = {
-                                livenessCoordinator.processSessionError(
-                                    FaceLivenessDetectionException.UserCancelledException(),
-                                    true
-                                )
-                            }
-                        ) {
-                            Text(
-                                text = stringResource(
-                                    R.string.amplify_ui_liveness_challenge_cancel
-                                ),
-                                style = KTalkCaptureStyle.buttonLabel
-                            )
-                        }
-                    }
+                CancelChallengeButton(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                ) {
+                    livenessCoordinator.processSessionError(
+                        FaceLivenessDetectionException.UserCancelledException(),
+                        true
+                    )
                 }
 
                 Box(
