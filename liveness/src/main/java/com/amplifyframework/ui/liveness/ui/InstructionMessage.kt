@@ -62,14 +62,14 @@ private fun InstructionMessage(
         horizontalArrangement = Arrangement.Center,
         modifier = Modifier
             .background(
-                color = MaterialTheme.colorScheme.background,
+                color = Color.White,
                 shape = MaterialTheme.shapes.small
             )
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         if (showProgress) {
             CircularProgressIndicator(
-                color = MaterialTheme.colorScheme.primary,
+                color = LocalKTalkAccent.current,
                 modifier = Modifier.size(16.dp),
                 strokeWidth = 2.dp,
             )
@@ -77,8 +77,8 @@ private fun InstructionMessage(
         }
         Text(
             message,
-            color = MaterialTheme.colorScheme.onBackground,
-            style = MaterialTheme.typography.bodyMedium,
+            color = KTalkCaptureStyle.titleColor,
+            style = KTalkCaptureStyle.description,
             textAlign = TextAlign.Center
         )
     }
@@ -90,23 +90,10 @@ private fun FaceOvalInstructionMessage(
 ) {
 
     val isTooClose = message == stringResource(FaceDetector.FaceOvalPosition.TOO_CLOSE.instructionStringRes)
-    val isInitialCenterFace =
-        LivenessCheckState.Initial.withStartViewMessage().instructionId?.let { stringResource(it) == message } == true
-
-    val backgroundColor = if (isTooClose) {
-        MaterialTheme.colorScheme.error
-    } else if (isInitialCenterFace) {
-        MaterialTheme.colorScheme.background
-    } else {
-        MaterialTheme.colorScheme.primary
-    }
-
     val textColor = if (isTooClose) {
-        MaterialTheme.colorScheme.onError
-    } else if (isInitialCenterFace) {
-        MaterialTheme.colorScheme.onBackground
+        KTalkCaptureStyle.errorColor
     } else {
-        MaterialTheme.colorScheme.onPrimary
+        KTalkCaptureStyle.titleColor
     }
 
     Row(
@@ -114,7 +101,7 @@ private fun FaceOvalInstructionMessage(
         horizontalArrangement = Arrangement.Center,
         modifier = Modifier
             .background(
-                color = backgroundColor,
+                color = Color.White,
                 shape = MaterialTheme.shapes.small
             )
             .padding(horizontal = 8.dp, vertical = 5.dp)
@@ -122,7 +109,7 @@ private fun FaceOvalInstructionMessage(
         Text(
             message,
             color = textColor,
-            style = MaterialTheme.typography.headlineLarge,
+            style = KTalkCaptureStyle.instruction,
             textAlign = TextAlign.Center
         )
     }

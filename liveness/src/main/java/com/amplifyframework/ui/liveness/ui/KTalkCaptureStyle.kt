@@ -28,6 +28,7 @@ internal object KTalkCaptureStyle {
     // app: CommonColors.gray1E / gray73 / orangeFF
     val titleColor = Color(0xFF1E1E1E)
     val descriptionColor = Color(0xFF737373)
+    val errorColor = Color(0xFFC84646) // app: CommonColors.redC8
     val accent = Color(0xFFFF7A59)
 
     // app: DesignPageTitle
@@ -45,6 +46,13 @@ internal object KTalkCaptureStyle {
         color = descriptionColor
     )
     val hint = description
+    val instruction = TextStyle(
+        fontFamily = fontFamily,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.W700,
+        lineHeight = 24.sp,
+        color = titleColor
+    )
     val buttonLabel = TextStyle(
         fontFamily = fontFamily,
         fontSize = 16.sp,
