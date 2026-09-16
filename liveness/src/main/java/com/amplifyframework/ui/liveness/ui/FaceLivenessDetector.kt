@@ -248,17 +248,10 @@ internal fun ChallengeView(
     val livenessState = livenessCoordinator.livenessState
 
     val localDensity = LocalDensity.current
-    val backgroundColor = if (livenessState.showingStartView) {
-        Color.White
-    } else if (livenessState.faceGuideRect != null) {
-        Color.White
-    } else {
-        Color.Black
-    }
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .background(Color.White)
             .onGloballyPositioned {
                 livenessState.updateVideoViewportSize(
                     VideoViewportSize.create(it.size, localDensity)
