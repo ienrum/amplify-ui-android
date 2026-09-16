@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.IntSize
@@ -34,6 +35,7 @@ class GetReadyViewTest : ComposeTest() {
 
     private fun checkReadyScreen(accent: Color) {
         var starts = 0
+        var backs = 0
         composeTestRule.setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 WithAppLanguage("en") {
@@ -46,7 +48,12 @@ class GetReadyViewTest : ComposeTest() {
                         )
                         // The blank preview stands in for the camera, not the ready UI.
                         Box(Modifier.fillMaxSize().background(Color.Black)) {
-                            GetReadyView(VideoViewportSize.create(size, density), false) { starts++ }
+                            GetReadyView(
+                                videoViewportSize = VideoViewportSize.create(size, density),
+                                loadingCameraPreview = false,
+                                onBegin = { starts++ },
+                                onBack = { backs++ }
+                            )
                         }
                     }
                 }
@@ -57,5 +64,7 @@ class GetReadyViewTest : ComposeTest() {
         composeTestRule.onNodeWithText("Center your face", substring = false).assertDoesNotExist()
         composeTestRule.onNodeWithText("Start video check").performClick()
         assertEquals(1, starts)
+        composeTestRule.onNodeWithContentDescription("Back").performClick()
+        assertEquals(1, backs)
     }
 }

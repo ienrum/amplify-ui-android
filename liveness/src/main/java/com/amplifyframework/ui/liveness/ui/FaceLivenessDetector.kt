@@ -17,6 +17,7 @@ package com.amplifyframework.ui.liveness.ui
 
 import android.graphics.RectF
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -31,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -53,6 +55,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -285,7 +288,15 @@ internal fun ChallengeView(
                 GetReadyView(
                     videoViewportSize = videoViewportSize,
                     loadingCameraPreview = livenessState.loadingCameraPreview,
-                    onBegin = { livenessState.onStartViewComplete() }
+                    onBegin = { livenessState.onStartViewComplete() },
+                    // The same cancel path as the close button during the challenge,
+                    // so the socket closes with the user-cancelled code either way.
+                    onBack = {
+                        livenessCoordinator.processSessionError(
+                            FaceLivenessDetectionException.UserCancelledException(),
+                            true
+                        )
+                    }
                 )
             } else {
                 livenessState.faceGuideRect?.let {
@@ -477,7 +488,8 @@ private fun shouldDisplayInstruction(
 internal fun GetReadyView(
     videoViewportSize: VideoViewportSize,
     loadingCameraPreview: Boolean,
-    onBegin: () -> Unit
+    onBegin: () -> Unit,
+    onBack: () -> Unit
 ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // Keep the hint below the SDK oval on compact displays.
@@ -502,28 +514,52 @@ internal fun GetReadyView(
             strokeColor = LocalKTalkAccent.current
         )
 
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(
+        Column(modifier = Modifier.align(Alignment.TopStart)) {
+            // KTalk fork: 도면의 Navigation_Bar 44 와 그 안의 Icon/Back 24.
+            Box(
+                modifier = Modifier
+                    .size(
+                        width = KTalkCaptureStyle.backButtonWidth,
+                        height = KTalkCaptureStyle.navBarHeight
+                    )
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Icon(
+                    painter = painterResource(
+                        R.drawable.amplify_ui_liveness_ktalk_back
+                    ),
+                    contentDescription = stringResource(
+                        R.string.amplify_ui_liveness_challenge_a11y_back_content_description
+                    ),
+                    tint = KTalkCaptureStyle.backIconColor,
+                    modifier = Modifier
+                        .padding(start = KTalkCaptureStyle.sideMargin)
+                        .size(KTalkCaptureStyle.backIconSize)
+                )
+            }
+
+            Column(
+                modifier = Modifier.padding(
                     start = KTalkCaptureStyle.sideMargin,
                     end = KTalkCaptureStyle.sideMargin,
                     top = KTalkCaptureStyle.titleTopFromNavBar
                 ),
-            verticalArrangement = Arrangement.spacedBy(
-                KTalkCaptureStyle.titleToDescription
-            )
-        ) {
-            Text(
-                text = stringResource(R.string.amplify_ui_liveness_challenge_title),
-                style = KTalkCaptureStyle.title
-            )
-            Text(
-                text = stringResource(
-                    R.string.amplify_ui_liveness_challenge_description
-                ),
-                style = KTalkCaptureStyle.description
-            )
+                verticalArrangement = Arrangement.spacedBy(
+                    KTalkCaptureStyle.titleToDescription
+                )
+            ) {
+                Text(
+                    text = stringResource(R.string.amplify_ui_liveness_challenge_title),
+                    style = KTalkCaptureStyle.title
+                )
+                Text(
+                    text = stringResource(
+                        R.string.amplify_ui_liveness_challenge_description
+                    ),
+                    style = KTalkCaptureStyle.description
+                )
+            }
         }
 
         // KTalk fork: 보조 문구와 시작 버튼. 버튼의 동작은 그대로

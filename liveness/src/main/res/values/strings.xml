@@ -38,4 +38,5 @@
     <string name="amplify_ui_liveness_challenge_description">Follow the on-screen instructions.</string>
     <string name="amplify_ui_liveness_challenge_hint">Look at the camera so your face is clearly visible.</string>
     <string name="amplify_ui_liveness_challenge_cancel">Cancel</string>
+    <string name="amplify_ui_liveness_challenge_a11y_back_content_description">Back</string>
 </resources>
