@@ -28,10 +28,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -45,7 +47,12 @@ internal fun FaceGuide(
     backgroundColor: Color = Color.White,
     // KTalk fork: stroke color only. The oval geometry stays as upstream sized it
     // ("as specified by science") because face fit is an input to the liveness score.
-    strokeColor: Color = Color(0xFFAEB3B7)
+    strokeColor: Color = Color(0xFFAEB3B7),
+    strokeWidth: Dp = 4.dp,
+    // KTalk fork: 도면의 「진행 표시」. SDK 가 준 얼굴 맞춤 정도를 타원 테두리로 옮겨
+    // 그릴 뿐이고, 인증이 얼마나 끝났는지를 뜻하지 않는다. null 이면 그리지 않는다.
+    progress: Float? = null,
+    progressColor: Color = Color(0xFFFF7A59)
 ) {
 
     val scaledBoundingRect = faceGuideRect?.let {
@@ -79,7 +86,7 @@ internal fun FaceGuide(
         // Draw oval stroke
         drawOval(
             color = strokeColor,
-            style = Stroke(4.dp.toPx()),
+            style = Stroke(strokeWidth.toPx()),
             topLeft = ovalTopLeft,
             size = ovalSize
         )
@@ -92,6 +99,23 @@ internal fun FaceGuide(
             size = ovalSize,
             blendMode = BlendMode.SrcOut
         )
+
+        // 진행 표시는 잘라낸 뒤에 그린다 — 타원 안쪽을 지우는 blend 에 먹히지 않게.
+        if (progress != null) {
+            val inset = KTalkCaptureStyle.progressInset.toPx()
+            drawArc(
+                color = progressColor,
+                startAngle = -90f,
+                sweepAngle = 360f * progress.coerceIn(0f, 1f),
+                useCenter = false,
+                topLeft = Offset(ovalTopLeft.x - inset, ovalTopLeft.y - inset),
+                size = Size(ovalSize.width + inset * 2, ovalSize.height + inset * 2),
+                style = Stroke(
+                    width = KTalkCaptureStyle.progressStrokeWidth.toPx(),
+                    cap = StrokeCap.Round
+                )
+            )
+        }
     }
 }
 

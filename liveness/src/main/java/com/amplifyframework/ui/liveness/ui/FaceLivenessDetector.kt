@@ -21,17 +21,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -47,7 +48,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -247,11 +247,24 @@ internal fun ChallengeView(
     val livenessCoordinator = coordinator ?: return
     val livenessState = livenessCoordinator.livenessState
 
+    // 준비 화면은 흰 배경, 촬영 화면은 검은 배경이다. 시스템 바 글자색을 맞추지
+    // 않으면 시계가 배경에 묻힌다.
+    SystemBarIcons(darkIcons = livenessState.showingStartView)
+
     val localDensity = LocalDensity.current
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(
+                if (livenessState.showingStartView) {
+                    Color.White
+                } else {
+                    KTalkCaptureStyle.captureBackground
+                }
+            )
+            // 배경은 시스템 바 아래까지 깔고 내용만 안쪽으로 넣는다. 호스트가
+            // 콘텐츠 뷰에 여백을 주면 시스템 바 자리에 창 배경색이 드러난다.
+            .windowInsetsPadding(WindowInsets.systemBars)
             .onGloballyPositioned {
                 livenessState.updateVideoViewportSize(
                     VideoViewportSize.create(it.size, localDensity)
@@ -289,15 +302,40 @@ internal fun ChallengeView(
                     }
                 )
             } else {
-                livenessState.faceGuideRect?.let {
-                    FaceGuide(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .align(Alignment.Center),
-                        faceGuideRect = it,
-                        videoViewportSize = videoViewportSize
-                    )
-                }
+                val checkState = livenessState.livenessCheckState
+                // TOO_FAR / TOO_FAR_LEFT / TOO_FAR_RIGHT 이 같은 안내 문자열을 쓰고,
+                // 얼굴이 사라졌을 때의 Running.withMoveFaceMessage() 도 같은 문자열을
+                // 쓴다. 얼굴이 없는데 「절반쯤 왔어요」를 띄우지 않도록 faceDetected 를
+                // 함께 본다.
+                val showingProgress = livenessState.faceDetected &&
+                    checkState.instructionId ==
+                    FaceDetector.FaceOvalPosition.TOO_FAR.instructionStringRes
+                val lightChallenge =
+                    livenessState.livenessSessionInfo.isFaceMovementAndLightChallenge()
+
+                // 확인 중에는 livenessState.faceGuideRect 가 비워지고 타원이
+                // LivenessCheckState.Success 안으로 옮겨 간다. 그 값을 이어받아
+                // 타원을 계속 그린다 — 얼굴이 보이는 채로 결과를 기다리게 한다.
+                val faceGuideRect = livenessState.faceGuideRect
+                    ?: (checkState as? LivenessCheckState.Success)?.faceGuideRect
+                FaceGuide(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .align(Alignment.Center),
+                    // 서버가 타원을 알려주기 전에는 준비 화면과 같은 자리를
+                    // 쓴다. 화면이 통짜 카메라로 보이지 않게만 하는 값이고,
+                    // 판정에는 쓰이지 않는다.
+                    faceGuideRect = faceGuideRect ?: PLACEHOLDER_FACE_GUIDE_RECT,
+                    videoViewportSize = videoViewportSize,
+                    backgroundColor = KTalkCaptureStyle.captureBackground,
+                    strokeColor = KTalkCaptureStyle.captureOvalStroke,
+                    strokeWidth = KTalkCaptureStyle.captureOvalStrokeWidth,
+                    // 얼굴이 타원에 얼마나 맞았는지다. SDK 가 계산한 값을 그대로
+                    // 테두리에 옮긴다. takeIf 로 쓰면 수신자를 먼저 읽어, 쓰지 않는
+                    // 구간에도 매 프레임 재구성이 걸린다.
+                    progress = if (showingProgress) livenessState.faceMatchPercentage else null,
+                    progressColor = LocalKTalkAccent.current
+                )
 
                 if (livenessState.faceMatched) {
                     if (livenessState.livenessSessionInfo.isFaceMovementAndLightChallenge()) {
@@ -324,8 +362,24 @@ internal fun ChallengeView(
                     }
                 }
 
-                KTalkBackButton(
-                    modifier = Modifier.align(Alignment.TopStart)
+                KTalkRecordingBadge(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(
+                            start = KTalkCaptureStyle.sideMargin,
+                            top = KTalkCaptureStyle.captureTopMargin
+                        )
+                )
+
+                KTalkCloseButton(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(
+                            end = KTalkCaptureStyle.sideMargin -
+                                KTalkCaptureStyle.closeTouchOverhang,
+                            top = KTalkCaptureStyle.captureTopMargin -
+                                KTalkCaptureStyle.closeTouchOverhang
+                        )
                 ) {
                     livenessCoordinator.processSessionError(
                         FaceLivenessDetectionException.UserCancelledException(),
@@ -333,72 +387,57 @@ internal fun ChallengeView(
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(videoViewportSize.viewportDpSize)
-                        .align(Alignment.Center)
+                if (shouldDisplayInstruction(
+                        checkState,
+                        livenessState.livenessSessionInfo?.challengeType
+                    )
                 ) {
-                    if (livenessState.faceGuideRect != null) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            contentAlignment = Alignment.TopCenter
-                        ) {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(5.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                if (shouldDisplayInstruction(
-                                        livenessState.livenessCheckState,
-                                        livenessState.livenessSessionInfo?.challengeType
-                                    )
-                                ) {
-                                    InstructionMessage(livenessState.livenessCheckState)
-                                }
-                                if (livenessState.livenessCheckState.instructionId ==
-                                    FaceDetector.FaceOvalPosition.TOO_FAR.instructionStringRes
-                                ) {
-                                    val scaledOvalRect = livenessState.faceGuideRect?.let {
-                                        videoViewportSize.getScaledBoundingRect(it)
-                                    } ?: RectF()
-                                    val progressWidth = with(LocalDensity.current) {
-                                        ((scaledOvalRect.right - scaledOvalRect.left) * 0.6f).toDp()
-                                    }
-                                    LinearProgressIndicator(
-                                        progress = livenessState.faceMatchPercentage,
-                                        modifier = Modifier
-                                            .clip(MaterialTheme.shapes.small)
-                                            .width(progressWidth)
-                                            .height(12.dp),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        trackColor = MaterialTheme.colorScheme.surface
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            contentAlignment = Alignment.TopCenter
-                        ) {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                InstructionMessage(livenessState.livenessCheckState)
-                            }
-                        }
-                    }
+                    InstructionMessage(
+                        livenessCheckState = checkState,
+                        highlighted = showingProgress,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(
+                                start = KTalkCaptureStyle.sideMargin,
+                                end = KTalkCaptureStyle.sideMargin,
+                                top = KTalkCaptureStyle.captureBubbleTop
+                            )
+                    )
+                }
+
+                // 연결 중·확인 중에는 보조 문구를 거둔다 — 사용자가 할 일이 없다.
+                val hintRes = when {
+                    !checkState.isActionable -> null
+                    livenessState.faceMatched && lightChallenge ->
+                        R.string.amplify_ui_liveness_challenge_capture_hint_light
+                    showingProgress ->
+                        R.string.amplify_ui_liveness_challenge_capture_hint_progress
+                    else -> R.string.amplify_ui_liveness_challenge_capture_hint
+                }
+                if (hintRes != null) {
+                    KTalkCaptureHint(
+                        message = stringResource(hintRes),
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(
+                                start = KTalkCaptureStyle.sideMargin,
+                                end = KTalkCaptureStyle.sideMargin,
+                                bottom = KTalkCaptureStyle.captureHintBottom
+                            )
+                    )
                 }
             }
         }
     }
 }
+
+/**
+ * 준비 화면과 촬영 시작 직후가 쓰는 타원. 480x640 미리보기 기준으로 upstream 이
+ * "as specified by science" 라고 적어 둔 값이다. 서버가 타원을 알려주면 그 값으로
+ * 바뀐다.
+ */
+private val PLACEHOLDER_FACE_GUIDE_RECT = RectF(120f, 126f, 360f, 514f)
 
 internal data class DetectorStateKey(
     val sessionId: String,
@@ -487,8 +526,7 @@ internal fun GetReadyView(
             modifier = Modifier
                 .fillMaxSize()
                 .align(Alignment.Center),
-            // positioned based on 480x640 preview and sized as specified by science
-            faceGuideRect = RectF(120f, 126f, 360f, 514f),
+            faceGuideRect = PLACEHOLDER_FACE_GUIDE_RECT,
             videoViewportSize = videoViewportSize,
             backgroundColor = Color.White,
             strokeColor = LocalKTalkAccent.current

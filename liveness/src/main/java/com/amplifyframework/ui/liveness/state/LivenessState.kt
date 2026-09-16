@@ -59,6 +59,11 @@ internal data class LivenessState(
     var initialFaceDistanceCheckPassed by mutableStateOf(false)
     var initialLocalFaceFound by mutableStateOf(false)
 
+    // KTalk fork: 표시 전용이다. 안내 문구와 진행 표시가 「얼굴이 지금 잡히는가」를
+    // 알아야 하는데, 얼굴이 사라진 상태와 얼굴이 멀리 있는 상태가 같은 안내
+    // 문자열을 쓴다. 판정에는 쓰지 않는다.
+    var faceDetected by mutableStateOf(false)
+
     var showingStartView by mutableStateOf(!disableStartView)
     var loadingCameraPreview by mutableStateOf(false)
 
@@ -179,6 +184,7 @@ internal data class LivenessState(
     }
 
     fun onFrameFaceCountUpdate(faceCount: Int) {
+        faceDetected = faceCount == 1
         if (detectedFaceMatchedOval) {
             return
         }

@@ -39,4 +39,8 @@
     <string name="amplify_ui_liveness_challenge_hint">Look at the camera so your face is clearly visible.</string>
     <string name="amplify_ui_liveness_challenge_cancel">Cancel</string>
     <string name="amplify_ui_liveness_challenge_a11y_back_content_description">Back</string>
+    <!-- KTalk fork: 촬영 중 화면의 보조 문구(DSN-APP-IDT-0007-06). -->
+    <string name="amplify_ui_liveness_challenge_capture_hint">Take off your hat and mask.</string>
+    <string name="amplify_ui_liveness_challenge_capture_hint_progress">Almost there. Keep moving slowly.</string>
+    <string name="amplify_ui_liveness_challenge_capture_hint_light">The screen will change color a few times.</string>
 </resources>

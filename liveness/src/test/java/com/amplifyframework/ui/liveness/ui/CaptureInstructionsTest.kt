@@ -12,7 +12,6 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -32,20 +31,34 @@ class CaptureInstructionsTest : ComposeTest() {
     @Test
     @ScreenshotTest
     @Config(qualifiers = "w375dp-h667dp-mdpi")
-    fun instructionsStayReadableAndBackCancels() {
+    fun captureOverlayStaysReadableAndCloseCancels() {
         var cancellations = 0
         composeTestRule.setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 WithAppLanguage("en") {
                     val density = LocalDensity.current
-                    CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 1.5f)) {
-                        Box(Modifier.fillMaxSize().background(Color.White)) {
-                            KTalkBackButton { cancellations++ }
+                    CompositionLocalProvider(
+                        LocalDensity provides Density(density.density, fontScale = 1.5f)
+                    ) {
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .background(KTalkCaptureStyle.captureBackground)
+                        ) {
+                            KTalkRecordingBadge(modifier = Modifier.align(Alignment.TopStart))
+                            KTalkCloseButton(modifier = Modifier.align(Alignment.TopEnd)) {
+                                cancellations++
+                            }
                             Column(
-                                modifier = Modifier.align(Alignment.TopCenter).padding(top = 80.dp),
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(top = 80.dp),
                                 verticalArrangement = Arrangement.spacedBy(32.dp)
                             ) {
-                                InstructionMessage(LivenessCheckState.Running.withMoveFaceMessage())
+                                InstructionMessage(
+                                    LivenessCheckState.Running.withMoveFaceMessage(),
+                                    highlighted = true
+                                )
                                 InstructionMessage(
                                     LivenessCheckState.Running.withFaceOvalPosition(
                                         FaceDetector.FaceOvalPosition.TOO_CLOSE
@@ -53,15 +66,26 @@ class CaptureInstructionsTest : ComposeTest() {
                                 )
                                 InstructionMessage(LivenessCheckState.Success(RectF()))
                             }
+                            KTalkCaptureHint(
+                                message = "Take off your hat and mask.",
+                                modifier = Modifier.align(Alignment.BottomCenter)
+                            )
                         }
                     }
                 }
             }
         }
-        for (message in listOf("Move closer", "Move back", "Verifying")) {
+        val expected = listOf(
+            "REC",
+            "Move closer",
+            "Move back",
+            "Verifying",
+            "Take off your hat and mask."
+        )
+        for (message in expected) {
             composeTestRule.onNodeWithText(message).assertIsDisplayed()
         }
-        composeTestRule.onNodeWithContentDescription("Back").performClick()
+        composeTestRule.onNodeWithContentDescription("Cancel Challenge").performClick()
         assertEquals(1, cancellations)
     }
 }

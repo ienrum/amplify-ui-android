@@ -16,103 +16,40 @@
 package com.amplifyframework.ui.liveness.ui
 
 import android.content.res.Configuration.UI_MODE_NIGHT_YES
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.Typography
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.amplifyframework.ui.liveness.ml.FaceDetector
 import com.amplifyframework.ui.liveness.model.LivenessCheckState
 
+/**
+ * 도면의 「상태 안내」. 어떤 문구를 언제 띄울지는 [livenessCheckState] 가 정한다 —
+ * 여기서는 색만 고른다.
+ *
+ * @param highlighted 가까이 오라는 안내처럼 사용자가 움직여야 할 때 강조색을 쓴다.
+ */
 @Composable internal fun InstructionMessage(
-    livenessCheckState: LivenessCheckState
+    livenessCheckState: LivenessCheckState,
+    highlighted: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
     val instructionText = livenessCheckState.instructionId?.let { stringResource(it) } ?: return
-    if (livenessCheckState.isActionable) {
-        FaceOvalInstructionMessage(message = instructionText)
-    } else {
-        InstructionMessage(message = instructionText, showProgress = true)
-    }
-}
-@Composable
-private fun InstructionMessage(
-    message: String,
-    showProgress: Boolean
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-        modifier = Modifier
-            .background(
-                color = Color.White,
-                shape = MaterialTheme.shapes.small
-            )
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        if (showProgress) {
-            CircularProgressIndicator(
-                color = LocalKTalkAccent.current,
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp,
-            )
-            Spacer(modifier = Modifier.size(8.dp))
-        }
-        Text(
-            message,
-            color = KTalkCaptureStyle.titleColor,
-            style = KTalkCaptureStyle.description,
-            textAlign = TextAlign.Center
-        )
-    }
-}
+    val isTooClose = livenessCheckState.instructionId ==
+        FaceDetector.FaceOvalPosition.TOO_CLOSE.instructionStringRes
 
-@Composable
-private fun FaceOvalInstructionMessage(
-    message: String
-) {
-
-    val isTooClose = message == stringResource(FaceDetector.FaceOvalPosition.TOO_CLOSE.instructionStringRes)
-    val textColor = if (isTooClose) {
-        KTalkCaptureStyle.errorColor
-    } else {
-        KTalkCaptureStyle.titleColor
-    }
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-        modifier = Modifier
-            .background(
-                color = Color.White,
-                shape = MaterialTheme.shapes.small
-            )
-            .padding(horizontal = 8.dp, vertical = 5.dp)
-    ) {
-        Text(
-            message,
-            color = textColor,
-            style = KTalkCaptureStyle.instruction,
-            textAlign = TextAlign.Center
-        )
-    }
+    KTalkInstructionBubble(
+        message = instructionText,
+        containerColor = when {
+            isTooClose -> KTalkCaptureStyle.errorColor
+            highlighted -> LocalKTalkAccent.current
+            else -> KTalkCaptureStyle.captureBubble
+        },
+        // 연결 중·확인 중처럼 사용자가 할 일이 없는 안내에만 회전 표시를 붙인다.
+        showProgress = !livenessCheckState.isActionable,
+        modifier = modifier
+    )
 }
 
 @Preview
@@ -120,32 +57,9 @@ private fun FaceOvalInstructionMessage(
 @Composable
 private fun InstructionMessagePreview() {
     LivenessPreviewContainer {
-        InstructionMessage("Success", true)
-    }
-}
-@Preview
-@Composable
-private fun InstructionMessageProgressPreview() {
-    LivenessPreviewContainer {
-        InstructionMessage("Success", true)
-    }
-}
-
-@Preview
-@Preview(uiMode = UI_MODE_NIGHT_YES)
-@Composable
-private fun FaceOvalInstructionMessagePreview() {
-    LivenessPreviewContainer {
-        FaceOvalInstructionMessage("Move closer")
-    }
-}
-
-@Preview
-@Composable
-private fun InstructionMessageMultiLinePreview() {
-    LivenessPreviewContainer {
-        InstructionMessage(
-            message = "Instruction message \n multiline",
+        KTalkInstructionBubble(
+            message = "얼굴을 타원 안에 맞춰주세요",
+            containerColor = KTalkCaptureStyle.captureBubble,
             showProgress = false
         )
     }
@@ -153,21 +67,24 @@ private fun InstructionMessageMultiLinePreview() {
 
 @Preview
 @Composable
-private fun InstructionMessageCustomThemePreview() {
-    LivenessPreviewContainer(
-        colorScheme = lightColorScheme(
-            primary = Color.White,
-            background = Color.Blue,
-            onBackground = Color.Yellow,
-        ),
-        typography = Typography(
-            bodyMedium = TextStyle(
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Light,
-                fontFamily = FontFamily.Cursive
-            )
+private fun InstructionMessageHighlightedPreview() {
+    LivenessPreviewContainer {
+        KTalkInstructionBubble(
+            message = "조금 더 가까이 와주세요",
+            containerColor = Color(0xFFFF7A59),
+            showProgress = false
         )
-    ) {
-        InstructionMessage("Success", true)
+    }
+}
+
+@Preview
+@Composable
+private fun InstructionMessageProgressPreview() {
+    LivenessPreviewContainer {
+        KTalkInstructionBubble(
+            message = "확인 중",
+            containerColor = KTalkCaptureStyle.captureBubble,
+            showProgress = true
+        )
     }
 }
