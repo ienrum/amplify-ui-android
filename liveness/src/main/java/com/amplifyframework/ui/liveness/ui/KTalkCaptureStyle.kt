@@ -52,8 +52,14 @@ internal object KTalkCaptureStyle {
         color = Color.White
     )
 
+    // app: the back chevron stroke in assets/icons/arrow/24-chevron-left.svg
+    val backIconColor = Color(0xFF4E4E4E)
+
     // frame values
     val sideMargin = 20.dp
+    val navBarHeight = 44.dp
+    val backButtonWidth = 52.dp
+    val backIconSize = 24.dp
     val titleTopFromNavBar = 40.dp
     val titleToDescription = 4.dp
     val hintToButton = 75.dp

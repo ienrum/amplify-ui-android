@@ -17,8 +17,10 @@ package com.amplifyframework.ui.liveness.ui
 
 import android.graphics.RectF
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,10 +28,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -52,6 +55,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -158,40 +162,40 @@ fun FaceLivenessDetector(
     // Locks portrait orientation for duration of challenge and resets on complete
     LockPortraitOrientation { resetOrientation ->
         WithAppLanguage(languageTag) {
-        CompositionLocalProvider(LocalKTalkAccent provides accentOf(accentArgb)) {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            AlwaysOnMaxBrightnessScreen()
-            ChallengeView(
-                key = key,
-                sessionId = sessionId,
-                region,
-                credentialsProvider = credentialsProvider,
-                disableStartView,
-                challengeOptions = challengeOptions,
-                videoOptions = videoOptions,
-                onChallengeComplete = {
-                    scope.launch {
-                        // if we are already finished, we already provided a result in complete or failed
-                        if (!isFinished) {
-                            isFinished = true
-                            resetOrientation()
-                            currentOnComplete.call()
+            CompositionLocalProvider(LocalKTalkAccent provides accentOf(accentArgb)) {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    AlwaysOnMaxBrightnessScreen()
+                    ChallengeView(
+                        key = key,
+                        sessionId = sessionId,
+                        region,
+                        credentialsProvider = credentialsProvider,
+                        disableStartView,
+                        challengeOptions = challengeOptions,
+                        videoOptions = videoOptions,
+                        onChallengeComplete = {
+                            scope.launch {
+                                // if we are already finished, we already provided a result in complete or failed
+                                if (!isFinished) {
+                                    isFinished = true
+                                    resetOrientation()
+                                    currentOnComplete.call()
+                                }
+                            }
+                        },
+                        onChallengeFailed = {
+                            scope.launch {
+                                // if we are already finished, we already provided a result in complete or failed
+                                if (!isFinished) {
+                                    isFinished = true
+                                    resetOrientation()
+                                    currentOnError.accept(it)
+                                }
+                            }
                         }
-                    }
-                },
-                onChallengeFailed = {
-                    scope.launch {
-                        // if we are already finished, we already provided a result in complete or failed
-                        if (!isFinished) {
-                            isFinished = true
-                            resetOrientation()
-                            currentOnError.accept(it)
-                        }
-                    }
+                    )
                 }
-            )
-        }
-        }
+            }
         }
     }
 }
@@ -214,7 +218,6 @@ internal fun ChallengeView(
     var coordinator by remember { mutableStateOf<LivenessCoordinator?>(null) }
     val currentOnChallengeComplete by rememberUpdatedState(onChallengeComplete)
     val currentOnChallengeFailed by rememberUpdatedState(onChallengeFailed)
-    val showPhotosensitivityAlert = remember { mutableStateOf(false) }
 
     DisposableEffect(key) {
         try {
@@ -249,7 +252,7 @@ internal fun ChallengeView(
 
     val localDensity = LocalDensity.current
     val backgroundColor = if (livenessState.showingStartView) {
-        MaterialTheme.colorScheme.background
+        Color.White
     } else if (livenessState.faceGuideRect != null) {
         Color.White
     } else {
@@ -282,113 +285,19 @@ internal fun ChallengeView(
             }
 
             if (livenessState.showingStartView) {
-
-                if (livenessState.loadingCameraPreview) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .align(Alignment.Center),
-                        strokeWidth = 2.dp,
-                    )
-                }
-
-                FaceGuide(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .align(Alignment.Center),
-                    // positioned based on 480x640 preview and sized as specified by science
-                    faceGuideRect = RectF(120f, 126f, 360f, 514f),
+                GetReadyView(
                     videoViewportSize = videoViewportSize,
-                    backgroundColor = MaterialTheme.colorScheme.background
-                )
-
-                // KTalk fork: 준비 화면의 제목·설명. 광과민성 고지와 SDK 안내는
-                // 그대로 둔다 — 고지를 가리거나 대체하지 않는다.
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(
-                            start = KTalkCaptureStyle.sideMargin,
-                            end = KTalkCaptureStyle.sideMargin,
-                            top = KTalkCaptureStyle.titleTopFromNavBar
-                        ),
-                    verticalArrangement = Arrangement.spacedBy(
-                        KTalkCaptureStyle.titleToDescription
-                    )
-                ) {
-                    Text(
-                        text = stringResource(R.string.amplify_ui_liveness_challenge_title),
-                        style = KTalkCaptureStyle.title
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.amplify_ui_liveness_challenge_description
-                        ),
-                        style = KTalkCaptureStyle.description
-                    )
-                }
-
-                Column(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .align(Alignment.TopCenter),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    if (livenessState.livenessSessionInfo.isFaceMovementAndLightChallenge()) {
-                        PhotosensitivityView {
-                            showPhotosensitivityAlert.value = true
-                        }
-                    }
-
-                    InstructionMessage(LivenessCheckState.Initial.withStartViewMessage())
-                }
-
-                // KTalk fork: 보조 문구와 시작 버튼. 버튼의 동작은 그대로
-                // onStartViewComplete 다.
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(
-                            start = KTalkCaptureStyle.sideMargin,
-                            end = KTalkCaptureStyle.sideMargin,
-                            bottom = KTalkCaptureStyle.buttonBottomMargin
-                        ),
-                    verticalArrangement = Arrangement.spacedBy(
-                        KTalkCaptureStyle.hintToButton
-                    )
-                ) {
-                    Text(
-                        text = stringResource(R.string.amplify_ui_liveness_challenge_hint),
-                        style = KTalkCaptureStyle.hint
-                    )
-                    Button(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(KTalkCaptureStyle.buttonHeight),
-                        shape = RoundedCornerShape(KTalkCaptureStyle.buttonCorner),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = LocalKTalkAccent.current
-                        ),
-                        onClick = {
-                            livenessState.onStartViewComplete()
-                        }
-                    ) {
-                        Text(
-                            text = stringResource(
-                                R.string.amplify_ui_liveness_get_ready_begin_check
-                            ),
-                            style = KTalkCaptureStyle.buttonLabel
+                    loadingCameraPreview = livenessState.loadingCameraPreview,
+                    onBegin = { livenessState.onStartViewComplete() },
+                    // The same cancel path as the close button during the challenge,
+                    // so the socket closes with the user-cancelled code either way.
+                    onBack = {
+                        livenessCoordinator.processSessionError(
+                            FaceLivenessDetectionException.UserCancelledException(),
+                            true
                         )
                     }
-                }
-
-                if (showPhotosensitivityAlert.value) {
-                    PhotosensitivityAlert {
-                        showPhotosensitivityAlert.value = false
-                    }
-                }
+                )
             } else {
                 livenessState.faceGuideRect?.let {
                     FaceGuide(
@@ -573,3 +482,122 @@ private fun shouldDisplayInstruction(
     } else {
         true
     }
+
+/** KTalk preparation screen; camera and session lifecycle remain in ChallengeView. */
+@Composable
+internal fun GetReadyView(
+    videoViewportSize: VideoViewportSize,
+    loadingCameraPreview: Boolean,
+    onBegin: () -> Unit,
+    onBack: () -> Unit
+) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // Keep the hint below the SDK oval on compact displays.
+        val hintToButton = if (maxHeight < 700.dp) 24.dp else KTalkCaptureStyle.hintToButton
+        if (loadingCameraPreview) {
+            CircularProgressIndicator(
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .align(Alignment.Center),
+                strokeWidth = 2.dp,
+            )
+        }
+
+        FaceGuide(
+            modifier = Modifier
+                .fillMaxSize()
+                .align(Alignment.Center),
+            // positioned based on 480x640 preview and sized as specified by science
+            faceGuideRect = RectF(120f, 126f, 360f, 514f),
+            videoViewportSize = videoViewportSize,
+            backgroundColor = Color.White,
+            strokeColor = LocalKTalkAccent.current
+        )
+
+        Column(modifier = Modifier.align(Alignment.TopStart)) {
+            // KTalk fork: 도면의 Navigation_Bar 44 와 그 안의 Icon/Back 24.
+            Box(
+                modifier = Modifier
+                    .size(
+                        width = KTalkCaptureStyle.backButtonWidth,
+                        height = KTalkCaptureStyle.navBarHeight
+                    )
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Icon(
+                    painter = painterResource(
+                        R.drawable.amplify_ui_liveness_ktalk_back
+                    ),
+                    contentDescription = stringResource(
+                        R.string.amplify_ui_liveness_challenge_a11y_back_content_description
+                    ),
+                    tint = KTalkCaptureStyle.backIconColor,
+                    modifier = Modifier
+                        .padding(start = KTalkCaptureStyle.sideMargin)
+                        .size(KTalkCaptureStyle.backIconSize)
+                )
+            }
+
+            Column(
+                modifier = Modifier.padding(
+                    start = KTalkCaptureStyle.sideMargin,
+                    end = KTalkCaptureStyle.sideMargin,
+                    top = KTalkCaptureStyle.titleTopFromNavBar
+                ),
+                verticalArrangement = Arrangement.spacedBy(
+                    KTalkCaptureStyle.titleToDescription
+                )
+            ) {
+                Text(
+                    text = stringResource(R.string.amplify_ui_liveness_challenge_title),
+                    style = KTalkCaptureStyle.title
+                )
+                Text(
+                    text = stringResource(
+                        R.string.amplify_ui_liveness_challenge_description
+                    ),
+                    style = KTalkCaptureStyle.description
+                )
+            }
+        }
+
+        // KTalk fork: 보조 문구와 시작 버튼. 버튼의 동작은 그대로
+        // onStartViewComplete 다.
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(
+                    start = KTalkCaptureStyle.sideMargin,
+                    end = KTalkCaptureStyle.sideMargin,
+                    bottom = KTalkCaptureStyle.buttonBottomMargin
+                ),
+            verticalArrangement = Arrangement.spacedBy(
+                hintToButton
+            )
+        ) {
+            Text(
+                text = stringResource(R.string.amplify_ui_liveness_challenge_hint),
+                style = KTalkCaptureStyle.hint
+            )
+            Button(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(KTalkCaptureStyle.buttonHeight),
+                shape = RoundedCornerShape(KTalkCaptureStyle.buttonCorner),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = LocalKTalkAccent.current
+                ),
+                onClick = onBegin
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.amplify_ui_liveness_get_ready_begin_check
+                    ),
+                    style = KTalkCaptureStyle.buttonLabel
+                )
+            }
+        }
+    }
+}
